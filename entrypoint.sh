@@ -37,6 +37,20 @@ if [ -z "${DATABASE_URL:-}" ]; then
   log "WARNING: which is container-local storage and is lost on every deploy."
 fi
 
+# --- ICMP diagnostic ---------------------------------------------------------
+# Kener's Ping monitor type shells out to iputils, which needs either CAP_NET_RAW
+# or an ICMP datagram socket. Railway grants neither, and the app can only report
+# the result as "host is unreachable" — indistinguishable from a real outage. Say
+# so once, here, where it is provably measured inside the real container.
+if ping -c 1 -W 1 127.0.0.1 >/dev/null 2>&1; then
+  log "ICMP is available; Ping monitors will work."
+else
+  log "NOTE: ICMP is not permitted in this container (CAP_NET_RAW dropped and"
+  log "NOTE: net.ipv4.ping_group_range is $(cat /proc/sys/net/ipv4/ping_group_range 2>/dev/null | tr '\t' ' ')),"
+  log "NOTE: so Kener's Ping monitors will always report DOWN. Use a TCP Port,"
+  log "NOTE: DNS or HTTP/API monitor for the same targets instead."
+fi
+
 # --- Owner account ----------------------------------------------------------
 # Kener has no signup page. /account/signin exposes a `signup` form action that
 # succeeds while the users table is empty, so a public deployment gives the admin

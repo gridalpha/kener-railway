@@ -15,8 +15,11 @@
 #      shipped default so an operator's own value is never reverted.
 #   3. The image grants /usr/bin/ping the CAP_NET_RAW file capability. Railway
 #      drops CAP_NET_RAW, and execve of a file-capability binary then fails
-#      outright — every ping monitor reports a bare EPERM. Removing the
-#      capability makes ping fall back to ICMP datagram sockets, which work.
+#      outright, so Node's spawn throws EPERM inside the monitor worker.
+#      Removing the capability lets ping run and fail cleanly instead. It cannot
+#      actually send: Railway also leaves net.ipv4.ping_group_range at the kernel
+#      default "1 0", so the unprivileged ICMP datagram socket is unavailable
+#      too — the entrypoint measures this at boot and says so in the log.
 #   4. Its node:24-slim base ends with `apt-get purge --auto-remove`, which takes
 #      ca-certificates with it: /etc/ssl/certs does not exist. Node carries its
 #      own root store so the app looks fine, but curl — the image's own
